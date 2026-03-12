@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vishaal — Elite Video Editing for Streamers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #080808;
+    --deep: #0d0d0d;
+    --card: #111111;
+    --border: #1e1e1e;
+    --red: #e8200a;
+    --red-dim: #7a1005;
+    --white: #f2f0eb;
+    --muted: #6a6a6a;
+    --accent: #ff4d2e;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 10px; height: 10px;
+    background: var(--red);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.15s ease;
+    mix-blend-mode: difference;
+  }
+  .cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(232,32,10,0.5);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9998;
+    transition: all 0.25s ease;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  /* ——— NAV ——— */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 500;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 60px;
+    background: linear-gradient(to bottom, rgba(8,8,8,0.95), transparent);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 4px;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .nav-logo span { color: var(--red); }
+  .nav-cta {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--white);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    padding: 10px 24px;
+    transition: all 0.3s ease;
+  }
+  .nav-cta:hover {
+    border-color: var(--red);
+    color: var(--red);
+  }
+
+  /* ——— HERO ——— */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0 60px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 40%, rgba(232,32,10,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 60% at 20% 80%, rgba(232,32,10,0.06) 0%, transparent 50%),
+      var(--black);
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  .hero-number {
+    position: absolute;
+    top: 160px; right: 60px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(180px, 22vw, 340px);
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.04);
+    line-height: 1;
+    user-select: none;
+    pointer-events: none;
+  }
+
+  .hero-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.8s ease 0.2s forwards;
+  }
+  .hero-badge::before {
+    content: '';
+    width: 32px; height: 1px;
+    background: var(--red);
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(64px, 9vw, 140px);
+    line-height: 0.92;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    position: relative;
+    z-index: 2;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.4s forwards;
+  }
+  .hero-title em {
+    font-style: normal;
+    color: transparent;
+    -webkit-text-stroke: 2px var(--white);
+  }
+  .hero-title .red { color: var(--red); -webkit-text-stroke: 0; }
+
+  .hero-sub {
+    margin-top: 32px;
+    font-size: 15px;
+    font-weight: 300;
+    color: var(--muted);
+    max-width: 400px;
+    line-height: 1.7;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.6s forwards;
+  }
+
+  .hero-actions {
+    margin-top: 48px;
+    display: flex; align-items: center; gap: 32px;
+    opacity: 0;
+    animation: fadeUp 0.9s ease 0.8s forwards;
+  }
+
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--red);
+    color: var(--white);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 18px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .btn-primary::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 0; height: 2px;
+    background: var(--white);
+    transition: width 0.3s ease;
+  }
+  .btn-primary:hover { background: #c41a08; }
+  .btn-primary:hover::after { width: 100%; }
+
+  .hero-scroll {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .scroll-line {
+    width: 40px; height: 1px;
+    background: var(--muted);
+    position: relative; overflow: hidden;
+  }
+  .scroll-line::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--red);
+    transform: translateX(-100%);
+    animation: scrollLine 2s ease infinite 1.5s;
+  }
+
+  /* ——— MARQUEE ——— */
+  .marquee-section {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 0;
+    overflow: hidden;
+    position: relative;
+  }
+  .marquee-track {
+    display: flex; gap: 0;
+    animation: marquee 22s linear infinite;
+    width: max-content;
+  }
+  .marquee-item {
+    white-space: nowrap;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 40px;
+    display: flex; align-items: center; gap: 40px;
+  }
+  .marquee-item span.dot {
+    width: 4px; height: 4px;
+    background: var(--red);
+    border-radius: 50%;
+    display: inline-block;
+  }
+
+  /* ——— SERVICES ——— */
+  .section { padding: 120px 60px; }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before { content: '0' counter(section); }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(48px, 6vw, 88px);
+    line-height: 0.95;
+    letter-spacing: 1px;
+    margin-bottom: 64px;
+  }
+
+  .services-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .service-card {
+    background: var(--deep);
+    padding: 52px 40px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.4s ease;
+  }
+  .service-card:hover { background: var(--card); }
+  .service-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 0; height: 2px;
+    background: var(--red);
+    transition: width 0.4s ease;
+  }
+  .service-card:hover::before { width: 100%; }
+
+  .service-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 32px;
+  }
+  .service-icon {
+    font-size: 28px;
+    margin-bottom: 24px;
+    display: block;
+  }
+  .service-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+  .service-desc {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .service-tag {
+    display: inline-block;
+    margin-top: 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+  }
+
+  /* ——— WHY ME ——— */
+  .why-section {
+    padding: 120px 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 120px;
+    align-items: center;
+  }
+  .why-left .section-title { margin-bottom: 32px; }
+  .why-left p {
+    font-size: 16px;
+    color: var(--muted);
+    line-height: 1.8;
+    margin-bottom: 48px;
+  }
+
+  .stats-row {
+    display: flex; gap: 48px;
+    padding-top: 48px;
+    border-top: 1px solid var(--border);
+  }
+  .stat-item {}
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 56px;
+    color: var(--white);
+    line-height: 1;
+  }
+  .stat-num span { color: var(--red); }
+  .stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 1px;
+  }
+
+  .why-right {
+    display: flex; flex-direction: column; gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+  .why-item {
+    background: var(--deep);
+    padding: 36px 40px;
+    display: flex; align-items: flex-start; gap: 24px;
+    transition: background 0.3s ease;
+  }
+  .why-item:hover { background: var(--card); }
+  .why-check {
+    width: 28px; height: 28px;
+    border: 1px solid var(--red);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .why-check::after {
+    content: '✓';
+    color: var(--red);
+    font-size: 12px;
+  }
+  .why-item-text h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    margin-bottom: 6px;
+  }
+  .why-item-text p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ——— PROCESS ——— */
+  .process-section { padding: 120px 60px; }
+  .process-steps {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin-top: 64px;
+    position: relative;
+  }
+  .process-steps::before {
+    content: '';
+    position: absolute;
+    top: 28px; left: calc(12.5% + 20px); right: calc(12.5% + 20px);
+    height: 1px;
+    background: linear-gradient(to right, var(--red), var(--border), var(--border), var(--red));
+  }
+  .process-step {
+    padding: 0 32px;
+    text-align: center;
+  }
+  .step-dot {
+    width: 56px; height: 56px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--red);
+    background: var(--black);
+    position: relative;
+    z-index: 2;
+    transition: all 0.3s ease;
+  }
+  .process-step:hover .step-dot {
+    border-color: var(--red);
+    background: var(--red);
+    color: var(--white);
+  }
+  .step-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .step-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ——— CTA ——— */
+  .cta-section {
+    margin: 0 60px 120px;
+    background: var(--deep);
+    border: 1px solid var(--border);
+    padding: 100px 80px;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(232,32,10,0.08) 0%, transparent 70%);
+  }
+  .cta-bg-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(80px, 14vw, 200px);
+    color: transparent;
+    -webkit-text-stroke: 1px rgba(255,255,255,0.03);
+    white-space: nowrap;
+    user-select: none;
+    pointer-events: none;
+    line-height: 1;
+  }
+  .cta-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .cta-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(52px, 7vw, 110px);
+    line-height: 0.95;
+    letter-spacing: 2px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .cta-sub {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 52px;
+    position: relative;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.7;
+  }
+  .cta-sub { margin-bottom: 52px; }
+  .btn-large {
+    display: inline-flex; align-items: center; gap: 14px;
+    background: var(--red);
+    color: var(--white);
+    text-decoration: none;
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 22px 56px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .btn-large:hover { background: #c41a08; transform: translateY(-2px); box-shadow: 0 20px 60px rgba(232,32,10,0.25); }
+  .btn-arrow { font-size: 18px; transition: transform 0.3s ease; }
+  .btn-large:hover .btn-arrow { transform: translateX(4px); }
+
+  /* ——— FOOTER ——— */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 48px 60px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18px;
+    letter-spacing: 4px;
+    color: var(--white);
+    text-decoration: none;
+  }
+  .footer-logo span { color: var(--red); }
+  .footer-copy {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .footer-link {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    transition: color 0.3s ease;
+  }
+  .footer-link:hover { color: var(--red); }
+
+  /* ——— ANIMATIONS ——— */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+  @keyframes scrollLine {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (max-width: 900px) {
+    nav, .hero, .section, .why-section, .process-section, .cta-section, footer {
+      padding-left: 24px; padding-right: 24px;
+    }
+    .cta-section { margin: 0 24px 80px; padding: 60px 32px; }
+    .services-grid, .process-steps { grid-template-columns: 1fr; }
+    .why-section { grid-template-columns: 1fr; gap: 60px; }
+    .stats-row { gap: 32px; }
+    .hero-number { font-size: 120px; right: 20px; top: 120px; }
+    .process-steps::before { display: none; }
+    .process-step { padding: 24px 0; text-align: left; display: flex; gap: 24px; align-items: flex-start; }
+    .step-dot { margin: 0; flex-shrink: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">VISH<span>.</span>AAL</a>
+  <a href="https://calendly.com/creator-vishaljadhav/30min" class="nav-cta" target="_blank">Book a Call</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+  <div class="hero-number">01</div>
+
+  <div style="position:relative; z-index:2;">
+    <div class="hero-badge">Elite Video Editing</div>
+    <h1 class="hero-title">
+      High-Energy<br>
+      <em>Edits</em> that<br>
+      <span class="red">Convert</span> Views
+    </h1>
+    <p class="hero-sub">
+      Premium video editing crafted for Twitch streamers — highlights, gaming clips, YouTube content & Shorts that keep audiences locked in.
+    </p>
+    <div class="hero-actions">
+      <a href="https://calendly.com/creator-vishaljadhav/30min" class="btn-primary" target="_blank">
+        Book a Free Call
+        <span>→</span>
+      </a>
+      <div class="hero-scroll">
+        <div class="scroll-line"></div>
+        Scroll to explore
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-section">
+  <div class="marquee-track">
+    <div class="marquee-item">Twitch Highlights <span class="dot"></span></div>
+    <div class="marquee-item">Gaming Edits <span class="dot"></span></div>
+    <div class="marquee-item">YouTube Videos <span class="dot"></span></div>
+    <div class="marquee-item">Short-Form Content <span class="dot"></span></div>
+    <div class="marquee-item">IRL Clips <span class="dot"></span></div>
+    <div class="marquee-item">Color Grading <span class="dot"></span></div>
+    <div class="marquee-item">Motion Graphics <span class="dot"></span></div>
+    <div class="marquee-item">Twitch Highlights <span class="dot"></span></div>
+    <div class="marquee-item">Gaming Edits <span class="dot"></span></div>
+    <div class="marquee-item">YouTube Videos <span class="dot"></span></div>
+    <div class="marquee-item">Short-Form Content <span class="dot"></span></div>
+    <div class="marquee-item">IRL Clips <span class="dot"></span></div>
+    <div class="marquee-item">Color Grading <span class="dot"></span></div>
+    <div class="marquee-item">Motion Graphics <span class="dot"></span></div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<section class="section reveal" style="counter-reset: section 0;">
+  <div class="section-label" style="counter-increment: section;">Services</div>
+  <h2 class="section-title">What I<br>Deliver</h2>
+
+  <div class="services-grid">
+    <div class="service-card">
+      <div class="service-number">01</div>
+      <span class="service-icon">⚡</span>
+      <div class="service-name">Twitch Highlights</div>
+      <p class="service-desc">Cinematic highlight reels that capture your best moments — paced for maximum retention and hype. Built to go viral.</p>
+      <span class="service-tag">Stream Content</span>
+    </div>
+    <div class="service-card">
+      <div class="service-number">02</div>
+      <span class="service-icon">🎮</span>
+      <div class="service-name">Gaming Edits</div>
+      <p class="service-desc">High-octane montages with synced cuts, motion blur, and effects that make every clip feel like a cinematic moment.</p>
+      <span class="service-tag">Montage / Clips</span>
+    </div>
+    <div class="service-card">
+      <div class="service-number">03</div>
+      <span class="service-icon">▶️</span>
+      <div class="service-name">YouTube Videos</div>
+      <p class="service-desc">Full long-form edits, let's plays, and commentary videos with clean pacing, b-roll, and professional polish.</p>
+      <span class="service-tag">Long-Form</span>
+    </div>
+    <div class="service-card">
+      <div class="service-number">04</div>
+      <span class="service-icon">📱</span>
+      <div class="service-name">Shorts & Reels</div>
+      <p class="service-desc">Vertical short-form clips engineered for the algorithm — hooks, pacing, and captions that stop the scroll instantly.</p>
+      <span class="service-tag">Short-Form</span>
+    </div>
+    <div class="service-card">
+      <div class="service-number">05</div>
+      <span class="service-icon">🎬</span>
+      <div class="service-name">IRL Content</div>
+      <p class="service-desc">Vlog-style and IRL stream footage turned into engaging, story-driven edits your audience will binge-watch.</p>
+      <span class="service-tag">Lifestyle / IRL</span>
+    </div>
+    <div class="service-card">
+      <div class="service-number">06</div>
+      <span class="service-icon">🎨</span>
+      <div class="service-name">Color & Motion</div>
+      <p class="service-desc">Professional color grading, animated overlays, custom transitions, and motion graphics to elevate your brand identity.</p>
+      <span class="service-tag">Post-Production</span>
+    </div>
+  </div>
+</section>
+
+<!-- WHY ME -->
+<section class="why-section reveal">
+  <div class="why-left">
+    <div class="section-label">Why Vishaal</div>
+    <h2 class="section-title">Built for<br>Streamers</h2>
+    <p>I don't just cut clips. I understand gaming culture, stream moments, and what makes content blow up. Every edit is engineered to grow your channel and build your audience.</p>
+    <a href="https://calendly.com/creator-vishaljadhav/30min" class="btn-primary" target="_blank" style="margin-top: 0;">
+      Start Today →
+    </a>
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-num">50<span>+</span></div>
+        <div class="stat-label">Projects Delivered</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">48<span>h</span></div>
+        <div class="stat-label">Avg. Turnaround</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">100<span>%</span></div>
+        <div class="stat-label">Client Satisfaction</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="why-right">
+    <div class="why-item">
+      <div class="why-check"></div>
+      <div class="why-item-text">
+        <h4>Deep Gaming Knowledge</h4>
+        <p>I understand what makes a gaming moment epic — so I know exactly which clips to keep and how to frame them.</p>
+      </div>
+    </div>
+    <div class="why-item">
+      <div class="why-check"></div>
+      <div class="why-item-text">
+        <h4>Fast Turnaround</h4>
+        <p>You need content consistently. I deliver on schedule, every time — no ghosting, no delays.</p>
+      </div>
+    </div>
+    <div class="why-item">
+      <div class="why-check"></div>
+      <div class="why-item-text">
+        <h4>Algorithm-Optimized</h4>
+        <p>Edits crafted with platform-specific pacing and hooks designed for YouTube, TikTok, and Twitch audiences.</p>
+      </div>
+    </div>
+    <div class="why-item">
+      <div class="why-check"></div>
+      <div class="why-item-text">
+        <h4>Unlimited Revisions</h4>
+        <p>Your vision matters. I refine the edit until it's exactly what you need, no extra charges.</p>
+      </div>
+    </div>
+    <div class="why-item">
+      <div class="why-check"></div>
+      <div class="why-item-text">
+        <h4>You Own Everything</h4>
+        <p>All final files, assets, and project files are 100% yours. No watermarks, no restrictions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section class="process-section reveal">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-title">From Raw Footage<br>to Viral Content</h2>
+
+  <div class="process-steps">
+    <div class="process-step">
+      <div class="step-dot">01</div>
+      <div>
+        <div class="step-title">Book a Call</div>
+        <p class="step-desc">We chat about your content goals, style preferences, and what you want to achieve.</p>
+      </div>
+    </div>
+    <div class="process-step">
+      <div class="step-dot">02</div>
+      <div>
+        <div class="step-title">Send Footage</div>
+        <p class="step-desc">Drop your raw files via Google Drive or any file sharing platform — simple and fast.</p>
+      </div>
+    </div>
+    <div class="process-step">
+      <div class="step-dot">03</div>
+      <div>
+        <div class="step-title">I Edit</div>
+        <p class="step-desc">Full professional edit with effects, pacing, music, and color — built to your brand.</p>
+      </div>
+    </div>
+    <div class="process-step">
+      <div class="step-dot">04</div>
+      <div>
+        <div class="step-title">You Publish</div>
+        <p class="step-desc">Receive your final export, ready to upload. Hit publish and watch the views roll in.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<div class="cta-section reveal">
+  <div class="cta-bg-text">BOOK NOW</div>
+  <div class="cta-label">Limited Spots Available</div>
+  <h2 class="cta-title">Ready to Level<br>Up Your Content?</h2>
+  <p class="cta-sub">Let's turn your raw footage into content that builds your community and grows your channel. First call is free.</p>
+  <a href="https://calendly.com/creator-vishaljadhav/30min" class="btn-large" target="_blank">
+    Book Your Free Call
+    <span class="btn-arrow">→</span>
+  </a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">VISH<span>.</span>AAL</a>
+  <span class="footer-copy">© 2026 — Elite Video Editing</span>
+  <a href="https://calendly.com/creator-vishaljadhav/30min" class="footer-link" target="_blank">Book a Call ↗</a>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx - 5 + 'px';
+    cursor.style.top = my - 5 + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx - 18) * 0.12;
+    ry += (my - ry - 18) * 0.12;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.transform = 'scale(2.5)';
+      ring.style.transform = 'scale(1.5)';
+      ring.style.borderColor = 'rgba(232,32,10,0.8)';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.transform = 'scale(1)';
+      ring.style.transform = 'scale(1)';
+      ring.style.borderColor = 'rgba(232,32,10,0.5)';
+    });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 100);
+      }
+    });
+  }, { threshold: 0.08 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
